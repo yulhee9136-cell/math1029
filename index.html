@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>어림 마스터: 나눗셈의 몫 어림하기 (Copy)</title>
+<title>어림 마스터: 나눗셈의 몫 어림하기</title>
 <!--
   어림 마스터 사용 방법
   1. 첫 화면에서 게임 방식(개인/모둠 대항전), 난이도, 출제할 자리와 어림 방법, 문제 수, 제한 시간을 고르고 [게임 시작]을 누릅니다.
@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   box-sizing:border-box;
@@ -212,6 +213,23 @@ input{font:inherit;user-select:text;-webkit-user-select:text}
 .others{display:flex;gap:1vw;flex-wrap:wrap;justify-content:center}
 .res-btns{display:flex;gap:1.4vw;flex-wrap:wrap;justify-content:center}
 
+/* ---------- QR 화면 ---------- */
+#qr{overflow:auto}
+.qr-wrap{margin:auto;width:min(1500px,100%);padding:4vh 4vw;display:grid;grid-template-columns:auto 1fr;gap:5vw;align-items:center}
+.qr-card{background:#fff;border-radius:32px;padding:3.4vh;box-shadow:0 10px 0 var(--line);border:3px solid var(--line);display:grid;place-items:center}
+#qrBox{width:min(62vh,80vw);height:min(62vh,80vw);display:grid;place-items:center;color:#1D2550;text-align:center;font-size:min(3vh,4vw)}
+#qrBox img,#qrBox canvas{width:100%!important;height:100%!important;image-rendering:pixelated}
+.qr-info{display:flex;flex-direction:column;gap:3vh}
+.qr-info h1{margin:0;font-weight:400;font-size:min(11vh,8vw);line-height:1}
+.qr-info .lead{margin:0;font-size:min(4.6vh,3.4vw);line-height:1.35}
+.qr-steps{margin:0;padding-left:1.2em;font-size:min(3.4vh,2.6vw);color:var(--muted);line-height:1.6}
+.qr-url{font-size:min(2.6vh,2vw);color:var(--muted);word-break:break-all;user-select:text;-webkit-user-select:text}
+.qr-edit{display:flex;gap:10px;flex-wrap:wrap}
+.qr-edit input{flex:1;min-width:240px;padding:.3em .6em;border-radius:12px;border:3px solid var(--line);background:var(--panel);color:var(--ink);font-size:min(2.6vh,2vw);min-height:56px}
+.qr-edit button{padding:0 1em;border-radius:12px;background:var(--panel);border:3px solid var(--line);font-size:min(2.6vh,2vw);min-height:56px}
+.qr-link{margin-left:1vw;font-size:min(3.4vh,2.4vw);padding:.45em .9em;border-radius:.5em;background:var(--panel);border:3px solid var(--line)}
+@media (max-width:900px){.qr-wrap{grid-template-columns:1fr;justify-items:center}.qr-info h1{font-size:12vw}.qr-info .lead,.qr-steps{font-size:max(16px,4vw)}}
+
 #fx{position:fixed;inset:0;pointer-events:none;z-index:50;width:100%;height:100%}
 
 @media (max-width:900px){
@@ -228,8 +246,31 @@ input{font:inherit;user-select:text;-webkit-user-select:text}
 </head>
 <body>
 
+<!-- QR 화면 -->
+<section class="screen on" id="qr">
+  <div class="qr-wrap">
+    <div class="qr-card"><div id="qrBox" role="img" aria-label="웹앱 주소 QR 코드"></div></div>
+    <div class="qr-info">
+      <h1>어림 마스터</h1>
+      <p class="lead">휴대폰이나 태블릿 카메라로<br>QR 코드를 찍어 들어와요!</p>
+      <ol class="qr-steps">
+        <li>카메라 앱을 켜요.</li>
+        <li>화면의 QR 코드를 비춰요.</li>
+        <li>뜨는 주소를 눌러 접속해요.</li>
+      </ol>
+      <div class="qr-url" id="qrUrlText"></div>
+      <div class="qr-edit">
+        <input id="qrInput" type="url" placeholder="QR로 보여 줄 주소" aria-label="QR로 보여 줄 주소">
+        <button id="qrApply">주소 바꾸기</button>
+        <button id="qrReset">기본 주소로</button>
+      </div>
+      <div><button class="start" id="qrNextBtn">게임 설정으로 가기</button></div>
+    </div>
+  </div>
+</section>
+
 <!-- 첫 화면 -->
-<section class="screen on" id="home">
+<section class="screen" id="home">
   <div class="home-wrap">
     <div class="hero">
       <h1>어림 마스터</h1>
@@ -243,7 +284,7 @@ input{font:inherit;user-select:text;-webkit-user-select:text}
         </div>
       </div>
       <div>
-        <button class="start" id="startBtn">게임 시작</button>
+        <button class="start" id="startBtn">게임 시작</button><button class="qr-link" id="qrOpenBtn">📱 QR 띄우기</button>
         <div class="err" id="err" role="alert"></div>
       </div>
       <div class="keys">키보드: 스페이스 정답 보기/다음, H 힌트, O 정답, X 오답, P 발표자 뽑기</div>
@@ -347,7 +388,8 @@ const LOWER=['소수 첫째 자리','소수 둘째 자리','소수 셋째 자리
 const METHODS={up:'올림',down:'버림',round:'반올림'};
 const TEAM_COLORS=['#EF5350','#4C8DF6','#1FAA74','#F5A623','#9B5DE5','#00A8B5'];
 const KEY='eorim-master-settings';
-const DEFAULTS={mode:'solo',difficulty:'normal',places:[true,true,false],methods:{up:true,down:true,round:true},count:10,timer:20,students:19,teamCount:4,teamNames:[],sound:true};
+const DEFAULTS={mode:'solo',difficulty:'normal',places:[true,true,false],methods:{up:true,down:true,round:true},count:10,timer:20,students:19,teamCount:4,teamNames:[],sound:true,qrUrl:''};
+const ARTIFACT_URL='https://claude.ai/artifact/5MvgQv7vpivNRAnP1ueSMC';
 
 /* ---------- 설정 저장 ---------- */
 function loadSettings(){
@@ -796,7 +838,32 @@ document.addEventListener('keydown',e=>{
   else if(k==='p') openPicker();
 });
 
+/* ---------- QR ---------- */
+function defaultUrl(){
+  const h=location.hostname||'';
+  if(/^https?:$/.test(location.protocol)&&h&&!/claude|anthropic|usercontent/i.test(h)) return location.href.split('#')[0];
+  return ARTIFACT_URL;
+}
+function qrUrl(){ return (S.qrUrl||'').trim()||defaultUrl(); }
+function renderQR(){
+  const box=$('#qrBox'), url=qrUrl();
+  box.innerHTML=''; $('#qrUrlText').textContent=url; $('#qrInput').value=url;
+  if(typeof QRCode==='undefined'){ box.textContent='인터넷 연결이 없어 QR 코드를 만들 수 없어요. 연결을 확인한 뒤 새로고침해 주세요.'; return; }
+  try{
+    new QRCode(box,{text:url,width:600,height:600,colorDark:'#1D2550',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+    box.removeAttribute('title');
+  }catch(e){ box.textContent='주소가 너무 길어 QR 코드를 만들 수 없어요.'; }
+}
+function openQR(){ renderQR(); show('qr'); }
+$('#qrNextBtn').onclick=()=>{ renderSettings(); show('home'); };
+$('#qrOpenBtn').onclick=openQR;
+$('#qrApply').onclick=()=>{ S.qrUrl=$('#qrInput').value.trim(); saveSettings(); renderQR(); };
+$('#qrReset').onclick=()=>{ S.qrUrl=''; saveSettings(); renderQR(); };
+$('#qrInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#qrApply').click(); });
+
 renderSettings(); renderSound();
+CUR='qr';
+if(document.readyState==='complete') renderQR(); else window.addEventListener('load',renderQR);
 })();
 </script>
 </body>
